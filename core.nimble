@@ -1,6 +1,6 @@
 # Package
 
-version       = "2.0"
+version       = "2.1"
 author        = "Gamedroit"
 description   = "Core library"
 license       = "MIT"

@@ -111,6 +111,9 @@ proc poll(self: IPCServer, socket: AsyncSocket) {.async.} =
     for uuid, callback in self.requests:
         callback(nil)
 
+    if self.channels.hasKey(conn.channel):
+        self.channels.del(conn.channel)
+
 proc listen(self: IPCServer) {.async.} =
     self.socket.listen();
 

@@ -92,15 +92,17 @@ proc poll(self: IPCClient) {.async.} =
         socket.setSockOpt(OptReuseAddr, true);
         socket.setSockOpt(OptKeepAlive, true);
 
-        self.socket = socket
-
         await socket.connect(self.address[0], self.address[1]);
+
+        self.socket = socket
 
         let data = newByteArray();
         data.writeByte(1);
         data.writeString(self.name);
 
         await socket.send(data.toString() & "\r\n");
+
+        echo "IPC Client: Reconnected."
     except:
         await sleepAsync(1000)
 

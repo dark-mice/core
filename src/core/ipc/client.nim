@@ -88,7 +88,7 @@ proc poll(self: IPCClient) {.async.} =
 
     self.emitter.dispatchEvent("disconnected", Event())
 
-proc reconnect(self: IPCClient) {.async.} =
+proc reconnect(self: IPCClient): Future[void] {.async.} =
     let socket = newAsyncSocket(buffered=false);
     socket.setSockOpt(OptReuseAddr, true);
     socket.setSockOpt(OptKeepAlive, true);

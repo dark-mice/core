@@ -93,6 +93,8 @@ proc poll(self: IPCClient) {.async.} =
         socket.setSockOpt(OptReuseAddr, true);
         socket.setSockOpt(OptKeepAlive, true);
 
+        self.socket = socket
+        
         await socket.connect(host, port);
 
         let data = newByteArray();

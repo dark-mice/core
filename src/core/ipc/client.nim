@@ -112,5 +112,6 @@ proc createIPCClient*(channel: string, port: Natural, host: string = "127.0.0.1"
 
         return iclient;
     except:
-        echo "Error?"
-        return nil
+        echo "IPC Client: Could not connect to server, trying again in 1s.";
+        await sleepAsync(1000);
+        return await createIPCClient(channel, port, host);

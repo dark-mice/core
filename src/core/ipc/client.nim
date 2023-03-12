@@ -84,6 +84,27 @@ proc poll(self: IPCClient) {.async.} =
     for uuid, callback in self.requests:
         callback(nil)
 
+    echo "IPC Client: The connection was closed, trying to reconnect."
+
+    try:
+        let (host, port) = self.socket.getPeerAddr();
+
+        let socket = newAsyncSocket(buffered=false);
+        socket.setSockOpt(OptReuseAddr, true);
+        socket.setSockOpt(OptKeepAlive, true);
+
+        await socket.connect(host, port);
+
+        let data = newByteArray();
+        data.writeByte(1);
+        data.writeString(self.name);
+
+        await socket.send(data.toString() & "\r\n");
+    except:
+        await sleepAsync(1000)
+
+    asyncCheck self.poll()
+
 proc createIPCClient*(channel: string, port: Natural, host: string = "127.0.0.1"): Future[IPCClient] {.async.} =
     try:
         let socket = newAsyncSocket(buffered=false);
@@ -91,9 +112,6 @@ proc createIPCClient*(channel: string, port: Natural, host: string = "127.0.0.1"
         socket.setSockOpt(OptKeepAlive, true);
 
         await socket.connect(host, Port(port));
-
-        if socket.isClosed():
-            return await createIPCClient(channel, port, host);
 
         let data = newByteArray();
         data.writeByte(1);

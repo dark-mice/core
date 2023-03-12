@@ -9,8 +9,6 @@ type IPCClient* = ref object
     name*: string
     emitter*: Emitter
 
-    address: (string, Port)
-
 proc send*(self: IPCClient, channel: string, message: string) {.async.} =
     if self.socket.isClosed:
         return;
@@ -86,63 +84,33 @@ proc poll(self: IPCClient) {.async.} =
     for uuid, callback in self.requests:
         callback(nil)
 
-    self.emitter.dispatchEvent("disconnected", Event())
-
-proc reconnect(self: IPCClient): Future[void] {.async.} =
-    let socket = newAsyncSocket(buffered=false);
-    socket.setSockOpt(OptReuseAddr, true);
-    socket.setSockOpt(OptKeepAlive, true);
-
-    try:
-        await socket.connect(self.address[0], self.address[1]);
-    except:
-        echo "IPC Client: Could not connect to server, trying again in 1s."
-        await sleepAsync(1000);
-        return await self.reconnect()
-
-    let data = newByteArray();
-    data.writeByte(1);
-    data.writeString(self.name);
-
-    await socket.send(data.toString() & "\r\n");
-
-    self.socket = socket;
-
-    asyncCheck self.poll();
-
 proc createIPCClient*(channel: string, port: Natural, host: string = "127.0.0.1"): Future[IPCClient] {.async.} =
-    let socket = newAsyncSocket(buffered=false);
-    socket.setSockOpt(OptReuseAddr, true);
-    socket.setSockOpt(OptKeepAlive, true);
-
     try:
+        let socket = newAsyncSocket(buffered=false);
+        socket.setSockOpt(OptReuseAddr, true);
+        socket.setSockOpt(OptKeepAlive, true);
+
         await socket.connect(host, Port(port));
+
+        if socket.isClosed():
+            return await createIPCClient(channel, port, host);
+
+        let data = newByteArray();
+        data.writeByte(1);
+        data.writeString(channel);
+
+        await socket.send(data.toString() & "\r\n");
+
+        let iclient = IPCClient(
+            requests: initTable[string, proc(response: IPCMessage) {.closure.}](),
+            socket: socket,
+            name: channel,
+            emitter: createEmitter()
+        )
+
+        asyncCheck iclient.poll();
+
+        return iclient;
     except:
-        echo "IPC Client: Could not connect to server, trying again in 1s."
-        await sleepAsync(1000);
-        return await createIPCClient(channel, port, host);
-    
-    let data = newByteArray();
-    data.writeByte(1);
-    data.writeString(channel);
-
-    await socket.send(data.toString() & "\r\n");
-
-    let iclient = IPCClient(
-        requests: initTable[string, proc(response: IPCMessage) {.closure.}](),
-        socket: socket,
-        name: channel,
-        emitter: createEmitter(),
-        address: (host, Port(port))
-    )
-
-    iclient.emitter.addEventListener(
-        "disconnected",
-        proc(e: Event) {.async.} =
-            echo "IPC Client: The connection was closed, trying to reconnect."
-            await iclient.reconnect()
-    );
-
-    asyncCheck iclient.poll();
-
-    return iclient;
+        echo "Error?"
+        return nil

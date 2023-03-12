@@ -8,6 +8,7 @@ type IPCClient* = ref object
     socket: AsyncSocket
     name*: string
     emitter*: Emitter
+    address: (string, Port)
 
 proc send*(self: IPCClient, channel: string, message: string) {.async.} =
     if self.socket.isClosed:
@@ -87,15 +88,13 @@ proc poll(self: IPCClient) {.async.} =
     echo "IPC Client: The connection was closed, trying to reconnect."
 
     try:
-        let (host, port) = self.socket.getPeerAddr();
-
         let socket = newAsyncSocket(buffered=false);
         socket.setSockOpt(OptReuseAddr, true);
         socket.setSockOpt(OptKeepAlive, true);
 
         self.socket = socket
-        
-        await socket.connect(host, port);
+
+        await socket.connect(self.address[0], self.address[1]);
 
         let data = newByteArray();
         data.writeByte(1);
@@ -125,7 +124,8 @@ proc createIPCClient*(channel: string, port: Natural, host: string = "127.0.0.1"
             requests: initTable[string, proc(response: IPCMessage) {.closure.}](),
             socket: socket,
             name: channel,
-            emitter: createEmitter()
+            emitter: createEmitter(),
+            address: (host, Port(port))
         )
 
         asyncCheck iclient.poll();

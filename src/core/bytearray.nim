@@ -58,13 +58,9 @@ proc readString*(self: ByteArray): string =
     return map(value, proc(x: int): char = char(x)).join;
 
 proc toString*(self: ByteArray): string =
-    try:
-        var bytes: seq[char] = @[];
+    var bytes: seq[char] = @[];
 
-        for x in self.bytes:
-            bytes.add(char(x))
+    for x in self.bytes:
+        bytes.add(char(x))
 
-        return bytes.join;
-    except CatchableError as error:
-        echo "Failed to convert ", self.bytes, " to string: ", error.msg
-        return "";
+    return bytes.join;

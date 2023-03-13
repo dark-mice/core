@@ -37,6 +37,9 @@ proc writeString*(self: ByteArray, value: string) =
     self.writeShort(value.len());
     self.bytes = self.bytes.concat(value);
 
+proc writeBytes*(self: ByteArray, value: seq[int]) =
+    self.bytes = self.bytes.concat(value);
+
 proc readByte*(self: ByteArray): int =
     let value = self.bytes[0];
     self.bytes.delete(0);
@@ -50,6 +53,11 @@ proc readShort*(self: ByteArray): int =
 
 proc readInt*(self: ByteArray): int =
     return (self.readByte() shl 24) or (self.readByte() shl 16) or (self.readByte() shl 8) or self.readByte();
+
+proc readBytes*(self: ByteArray, length: int): seq[int] =
+    let value = self.bytes[0..length];
+    self.bytes = self.bytes[length + 1..self.bytes.len() - 1];
+    return value;
 
 proc readString*(self: ByteArray): string =
     let length = self.readShort() - 1;

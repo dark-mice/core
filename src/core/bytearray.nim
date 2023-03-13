@@ -58,4 +58,9 @@ proc readString*(self: ByteArray): string =
     return map(value, proc(x: int): char = char(x)).join;
 
 proc toString*(self: ByteArray): string =
-    return map(self.bytes, proc(x: int): char = char(x)).join;
+    var bytes: seq[char] = @[];
+
+    for x in self.bytes:
+        bytes.add(char(x))
+
+    return bytes.join;
